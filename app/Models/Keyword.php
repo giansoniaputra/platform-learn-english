@@ -36,6 +36,11 @@ class Keyword extends Model
         return $this->hasMany(Topic::class);
     }
 
+    public function exercises(): HasMany
+    {
+        return $this->hasMany(Exercise::class);
+    }
+
     public static function findOrCreateByTerm(string $term): self
     {
         $slug = Str::slug($term);

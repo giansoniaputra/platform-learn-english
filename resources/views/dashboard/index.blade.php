@@ -59,6 +59,23 @@
     </div>
     <button class="btn-add-row" type="button" id="load-more-topics">+ Muat kasus lagi</button>
     <p class="ai-status" id="topics-status"></p>
+
+    <div class="section-label" style="margin-top:30px"><div class="eyebrow">Latihan</div><hr></div>
+    <div class="card">
+      <p style="font-size:13px;color:var(--ink-soft);line-height:1.6">
+        Diturunkan langsung dari kosakata di atas (tanpa panggilan AI baru — jadi instan &amp; gratis). Klik tombol di
+        bawah tiap kali menambah kosakata baru supaya latihannya ikut lengkap.
+      </p>
+      <div class="exercise-counts">
+        <div><b>{{ $exerciseCounts['arrange'] ?? 0 }}</b><span>Susun kata</span></div>
+        <div><b>{{ $exerciseCounts['fill_blank'] ?? 0 }}</b><span>Lengkapi kalimat</span></div>
+        <div><b>{{ $exerciseCounts['match_meaning'] ?? 0 }}</b><span>Padankan arti</span></div>
+      </div>
+      <form method="POST" action="{{ route('dashboard.exercises.generate', $selected) }}" style="margin-top:14px">
+        @csrf
+        <button class="btn" type="submit" style="width:auto;padding:12px 20px">Buat/perbarui latihan</button>
+      </form>
+    </div>
   @endif
 
   <script>

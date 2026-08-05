@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExerciseController;
 use App\Http\Controllers\KeywordController;
 use App\Http\Controllers\TopicController;
 use App\Http\Controllers\TtsController;
@@ -22,10 +23,15 @@ Route::middleware('auth')->group(function () {
             ? $keyword->topics()->orderBy('id')->get()
             : collect();
 
+        $exercises = $keyword
+            ? $keyword->exercises()->inRandomOrder()->get()
+            : collect();
+
         return view('welcome', [
             'activeKeyword' => $keyword,
             'words' => $keyword ? $keyword->words()->orderBy('id')->get()->map->toApp() : collect(),
             'topics' => $topics->values()->map(fn ($topic, $i) => $topic->toApp($i + 1)),
+            'exercises' => $exercises->map->toApp(),
         ]);
     })->name('app');
 
@@ -41,4 +47,6 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/dashboard/keywords/{keyword}/topics', [TopicController::class, 'generateMore'])->name('dashboard.topics.generate');
     Route::delete('/dashboard/topics/{topic}', [TopicController::class, 'destroy'])->name('dashboard.topics.destroy');
+
+    Route::post('/dashboard/keywords/{keyword}/exercises', [ExerciseController::class, 'generate'])->name('dashboard.exercises.generate');
 });

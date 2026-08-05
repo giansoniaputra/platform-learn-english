@@ -20,11 +20,16 @@ class DashboardController extends Controller
 
         $selected ??= $keywords->firstWhere('is_active', true) ?? $keywords->first();
 
+        $exerciseCounts = $selected
+            ? $selected->exercises()->selectRaw('type, count(*) as total')->groupBy('type')->pluck('total', 'type')
+            : collect();
+
         return view('dashboard.index', [
             'keywords' => $keywords,
             'selected' => $selected,
             'words' => $selected?->words()->orderBy('id')->get() ?? collect(),
             'topics' => $selected?->topics()->orderBy('id')->get() ?? collect(),
+            'exerciseCounts' => $exerciseCounts,
         ]);
     }
 }
