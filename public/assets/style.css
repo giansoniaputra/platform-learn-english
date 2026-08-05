@@ -926,6 +926,30 @@ h3 {
     margin-top: 28px
 }
 
+.ai-lang-toggle {
+    display: flex;
+    gap: 6px;
+    margin-top: 14px;
+}
+
+.lang-btn {
+    border: 1px solid var(--rule);
+    background: var(--card);
+    color: var(--ink-soft);
+    border-radius: 999px;
+    padding: 6px 13px;
+    font-size: 12px;
+    font-family: var(--mono);
+    letter-spacing: .04em;
+    cursor: pointer;
+}
+
+.lang-btn.on {
+    background: var(--marker-soft);
+    border-color: var(--marker-deep);
+    color: var(--marker-deep);
+}
+
 .ai-input-row {
     display: flex;
     gap: 8px;
@@ -977,6 +1001,7 @@ h3 {
 .correction-note {
     font-family: var(--body);
     font-size: 12.5px;
+    line-height: 1.5;
     color: var(--stamp);
     margin-top: 6px;
     font-style: italic;

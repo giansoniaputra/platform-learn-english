@@ -367,13 +367,12 @@
 
       const history = aiHistory[t.id] || (aiHistory[t.id] = []);
       const payloadHistory = history.slice(-16).map(h => ({ role: h.role, text: h.text }));
+      const inputLanguage = els.lang || "en";
 
-      renderAiLine(els.linesEl, t, "user", text);
-      history.push({ role: "user", text });
       els.inputEl.value = "";
       els.inputEl.disabled = true;
       els.sendBtn.disabled = true;
-      els.statusEl.textContent = "AI sedang mengetik...";
+      els.statusEl.textContent = inputLanguage === "id" ? "Menerjemahkan & AI sedang membalas..." : "AI sedang mengetik...";
 
       try {
         const res = await fetch("/api/percakapan/chat", {
@@ -388,6 +387,7 @@
             title: t.title,
             blurb: t.blurb,
             message: text,
+            input_language: inputLanguage,
             history: payloadHistory,
           }),
         });
@@ -395,23 +395,24 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Terjadi kesalahan.");
 
+        renderAiLine(els.linesEl, t, "user", data.message_en, {
+          translation: data.message_translation,
+          correction: data.correction,
+        });
+        history.push({
+          role: "user",
+          text: data.message_en,
+          translation: data.message_translation,
+          correction: data.correction,
+        });
+
         renderAiLine(els.linesEl, t, "assistant", data.reply, { translation: data.translation });
         history.push({ role: "assistant", text: data.reply, translation: data.translation });
-
-        if (data.correction) {
-          const userLines = els.linesEl.querySelectorAll(".line.me");
-          const lastUserLine = userLines[userLines.length - 1];
-          if (lastUserLine) {
-            const note = document.createElement("div");
-            note.className = "correction-note";
-            note.textContent = data.correction;
-            lastUserLine.appendChild(note);
-          }
-        }
 
         els.statusEl.textContent = "";
       } catch (err) {
         els.statusEl.textContent = err.message || "Gagal menghubungi AI. Coba lagi.";
+        els.inputEl.value = text;
       } finally {
         els.inputEl.disabled = false;
         els.sendBtn.disabled = false;
@@ -440,6 +441,10 @@
       <div class="section-label"><div class="eyebrow">Latihan bebas dengan AI</div><hr></div>
       <p style="font-size:13px;color:var(--ink-soft);margin-bottom:12px">Lanjutkan percakapan dengan ${escapeHtml(t.partner)} — balasan AI ini sungguhan merespons apa yang kamu tulis.</p>
       <div id="ai-lines"></div>
+      <div class="ai-lang-toggle" role="group" aria-label="Bahasa yang kamu ketik">
+        <button type="button" class="lang-btn on" data-lang="en">Ketik Inggris</button>
+        <button type="button" class="lang-btn" data-lang="id">Ketik Indonesia</button>
+      </div>
       <div class="ai-input-row">
         <input type="text" id="ai-input" placeholder="Ketik balasanmu dalam Bahasa Inggris..." autocomplete="off">
         <button class="btn" id="ai-send" type="button">Kirim</button>
@@ -477,13 +482,24 @@
         sendBtn: body.querySelector("#ai-send"),
         linesEl: aiLinesEl,
         statusEl: body.querySelector("#ai-status"),
+        lang: "en",
       };
       (aiHistory[t.id] || []).forEach(h =>
-        renderAiLine(aiLinesEl, t, h.role, h.text, { translation: h.translation })
+        renderAiLine(aiLinesEl, t, h.role, h.text, { translation: h.translation, correction: h.correction })
       );
       aiEls.sendBtn.addEventListener("click", () => sendAiMessage(t, aiEls));
       aiEls.inputEl.addEventListener("keydown", e => {
         if (e.key === "Enter") { e.preventDefault(); sendAiMessage(t, aiEls); }
+      });
+
+      body.querySelectorAll(".lang-btn").forEach(b => {
+        b.addEventListener("click", () => {
+          aiEls.lang = b.dataset.lang;
+          body.querySelectorAll(".lang-btn").forEach(x => x.classList.toggle("on", x === b));
+          aiEls.inputEl.placeholder = aiEls.lang === "id"
+            ? "Ketik dalam Bahasa Indonesia, nanti diterjemahkan otomatis..."
+            : "Ketik balasanmu dalam Bahasa Inggris...";
+        });
       });
 
       show("dialog", { tab: "percakapan" });
