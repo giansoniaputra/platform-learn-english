@@ -15,7 +15,7 @@ class ExerciseGenerator
      * (example sentences, translations, sibling words for distractors) is
      * already sitting in the `words` table.
      *
-     * @return array{arrange: int, fill_blank: int, match_meaning: int}
+     * @return array{arrange: int, fill_blank: int, match_meaning: int, listening: int}
      */
     public function generate(Keyword $keyword): array
     {
@@ -26,7 +26,7 @@ class ExerciseGenerator
             fn (Exercise $e) => $e->word_id === $wordId && $e->type === $type
         );
 
-        $created = ['arrange' => 0, 'fill_blank' => 0, 'match_meaning' => 0];
+        $created = ['arrange' => 0, 'fill_blank' => 0, 'match_meaning' => 0, 'listening' => 0];
         $enoughForDistractors = $words->count() >= 4;
 
         foreach ($words as $word) {
@@ -47,6 +47,11 @@ class ExerciseGenerator
             if (! $hasExercise($word->id, 'match_meaning') && $data = $this->buildMatchMeaning($word, $words)) {
                 $this->store($keyword, $word, 'match_meaning', $data);
                 $created['match_meaning']++;
+            }
+
+            if (! $hasExercise($word->id, 'listening') && $data = $this->buildListening($word, $words)) {
+                $this->store($keyword, $word, 'listening', $data);
+                $created['listening']++;
             }
         }
 
@@ -145,6 +150,38 @@ class ExerciseGenerator
             'prompt' => $word->en,
             'answer' => $word->translation,
             'options' => $distractors->push($word->translation)->shuffle()->values()->all(),
+        ];
+    }
+
+    /**
+     * Audio-first comprehension: play the example sentence's TTS (already
+     * cached from the vocabulary screen) and have the learner pick its
+     * correct Indonesian meaning among 3 distractors — the English text is
+     * never shown until after answering, so it actually tests listening.
+     */
+    private function buildListening(Word $word, Collection $words): ?array
+    {
+        if (! $word->example || ! $word->example_translation) {
+            return null;
+        }
+
+        $distractors = $words
+            ->where('id', '!=', $word->id)
+            ->pluck('example_translation')
+            ->filter()
+            ->unique()
+            ->shuffle()
+            ->take(3)
+            ->values();
+
+        if ($distractors->count() < 3) {
+            return null;
+        }
+
+        return [
+            'sentence' => $word->example,
+            'answer' => $word->example_translation,
+            'options' => $distractors->push($word->example_translation)->shuffle()->values()->all(),
         ];
     }
 }

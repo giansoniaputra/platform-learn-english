@@ -16,8 +16,8 @@ class ExerciseController extends Controller
         $total = array_sum($created);
 
         $status = $total > 0
-            ? "Berhasil membuat {$total} latihan baru (susun kata: {$created['arrange']}, lengkapi kalimat: {$created['fill_blank']}, padankan arti: {$created['match_meaning']})."
-            : 'Tidak ada latihan baru — semua kata sudah punya latihan, atau kosakata kunci ini belum cukup (minimal 4 kata untuk lengkapi kalimat & padankan arti).';
+            ? "Berhasil membuat {$total} latihan baru (susun kata: {$created['arrange']}, lengkapi kalimat: {$created['fill_blank']}, padankan arti: {$created['match_meaning']}, menyimak: {$created['listening']})."
+            : 'Tidak ada latihan baru — semua kata sudah punya latihan, atau kosakata kunci ini belum cukup (minimal 4 kata untuk lengkapi kalimat, padankan arti & menyimak).';
 
         return redirect()
             ->route('dashboard', ['keyword' => $keyword->slug])

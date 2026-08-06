@@ -196,15 +196,14 @@
         const target = el.dataset.go;
         const current = document.querySelector(".screen.is-on")?.id;
 
-        if (current === "latihan" && target !== "latihan" && quizInProgress) {
+        if (current === "latihan" && quizInProgress) {
           if (!confirm("Anda yakin ingin keluar? Semua progres latihan akan direset.")) return;
           quizInProgress = false;
         }
 
-        if (target === "latihan" && current !== "latihan") {
-          if (EXERCISES.length > 0 && !confirm("Mulai latihan sekarang?")) return;
+        if (target === "latihan") {
           show(target);
-          startLatihan();
+          showLatihanMenu();
           return;
         }
 
@@ -505,11 +504,18 @@
       show("dialog", { tab: "percakapan" });
     }
 
-    /* ---------------- latihan (quiz susun kata / lengkapi / padankan) ---------------- */
+    /* ---------------- latihan (quiz susun kata / lengkapi / padankan / menyimak) ---------------- */
     const latihanBody = document.getElementById("latihan-body");
+    const QUIZ_TYPE_LABELS = {
+      arrange: "Susun kata",
+      fill_blank: "Lengkapi kalimat",
+      match_meaning: "Padankan arti",
+      listening: "Menyimak",
+    };
     let quizQueue = [];
     let quizIndex = 0;
     let quizScore = 0;
+    let currentQuizType = null;
 
     function shuffle(arr) {
       const a = arr.slice();
@@ -520,21 +526,51 @@
       return a;
     }
 
-    function startLatihan() {
+    function showLatihanMenu() {
+      quizInProgress = false;
+
       if (EXERCISES.length === 0) {
-        quizInProgress = false;
         latihanBody.innerHTML = `<div class="card"><p style="font-size:14px;color:var(--ink-soft)">Belum ada latihan. Buka dashboard lalu klik "Buat/perbarui latihan" untuk membuatnya otomatis dari kosakata yang sudah ada.</p></div>`;
         return;
       }
+
+      const counts = {};
+      EXERCISES.forEach(ex => { counts[ex.type] = (counts[ex.type] || 0) + 1; });
+
+      const buttonsHtml = Object.keys(QUIZ_TYPE_LABELS)
+        .filter(type => counts[type] > 0)
+        .map(type => `
+          <button type="button" class="quiz-type-btn" data-type="${type}">
+            <span>${QUIZ_TYPE_LABELS[type]}</span>
+            <span class="quiz-type-count">${counts[type]} soal</span>
+          </button>`)
+        .join("");
+
+      latihanBody.innerHTML = `
+      <div class="card">
+        <p style="font-size:13px;color:var(--ink-soft);margin-bottom:12px">Pilih jenis latihan yang ingin kamu kerjakan.</p>
+        <div class="quiz-type-list">${buttonsHtml}</div>
+      </div>`;
+
+      latihanBody.querySelectorAll(".quiz-type-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          if (!confirm("Mulai latihan sekarang?")) return;
+          startLatihanByType(btn.dataset.type);
+        });
+      });
+    }
+
+    function startLatihanByType(type) {
+      currentQuizType = type;
       quizInProgress = true;
-      quizQueue = shuffle(EXERCISES);
+      quizQueue = shuffle(EXERCISES.filter(ex => ex.type === type));
       quizIndex = 0;
       quizScore = 0;
       renderQuizQuestion();
     }
 
     function quizProgressHtml() {
-      return `<div class="quiz-progress"><span>${quizIndex + 1} / ${quizQueue.length}</span><span>Skor: ${quizScore}</span></div>`;
+      return `<div class="quiz-progress"><span>${QUIZ_TYPE_LABELS[currentQuizType]} — ${quizIndex + 1} / ${quizQueue.length}</span><span>Skor: ${quizScore}</span></div>`;
     }
 
     function renderQuizQuestion() {
@@ -543,15 +579,18 @@
         latihanBody.innerHTML = `
       <div class="card quiz-summary">
         <h3>Latihan selesai!</h3>
-        <p style="font-size:14px;color:var(--ink-soft)">Skor kamu: <b>${quizScore}</b> dari <b>${quizQueue.length}</b>.</p>
+        <p style="font-size:14px;color:var(--ink-soft)">${QUIZ_TYPE_LABELS[currentQuizType]} — skor kamu: <b>${quizScore}</b> dari <b>${quizQueue.length}</b>.</p>
         <button class="btn" type="button" id="quiz-restart" style="width:auto;padding:12px 22px;margin-top:10px">Ulangi</button>
+        <button type="button" id="quiz-back-to-menu" style="width:auto;padding:12px 22px;margin-top:10px;margin-left:8px;background:none;border:1px solid var(--rule);border-radius:12px;cursor:pointer;font-family:var(--display);font-weight:700">Pilih Jenis Lain</button>
       </div>`;
-        document.getElementById("quiz-restart").addEventListener("click", startLatihan);
+        document.getElementById("quiz-restart").addEventListener("click", () => startLatihanByType(currentQuizType));
+        document.getElementById("quiz-back-to-menu").addEventListener("click", showLatihanMenu);
         return;
       }
 
       const ex = quizQueue[quizIndex];
       if (ex.type === "arrange") renderArrangeQuestion(ex);
+      else if (ex.type === "listening") renderListeningQuestion(ex);
       else renderChoiceQuestion(ex);
     }
 
@@ -688,6 +727,46 @@
           feedbackEl.textContent = correct
             ? "Benar!" + (isFillBlank && ex.translation ? " — " + ex.translation : "")
             : `Kurang tepat. Jawaban: ${ex.answer}`;
+          feedbackEl.className = "quiz-feedback " + (correct ? "correct" : "incorrect");
+          nextQuizQuestion(correct);
+        });
+        optionsEl.appendChild(b);
+      });
+    }
+
+    function renderListeningQuestion(ex) {
+      const options = shuffle(ex.options);
+
+      latihanBody.innerHTML = `
+      ${quizProgressHtml()}
+      <div class="card quiz-card">
+        <div class="quiz-instruction">Dengarkan lalu pilih arti yang tepat</div>
+        <button type="button" class="quiz-listen-btn" id="quiz-listen" aria-label="Putar audio">🔊 Putar audio</button>
+        <div class="quiz-options" id="quiz-options"></div>
+        <p class="quiz-feedback" id="quiz-feedback"></p>
+      </div>`;
+
+      const listenBtn = document.getElementById("quiz-listen");
+      listenBtn.addEventListener("click", () => speak(ex.sentence, listenBtn));
+
+      const optionsEl = document.getElementById("quiz-options");
+      const feedbackEl = document.getElementById("quiz-feedback");
+
+      options.forEach(opt => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "quiz-option";
+        b.textContent = opt;
+        b.addEventListener("click", () => {
+          const correct = opt === ex.answer;
+          optionsEl.querySelectorAll("button").forEach(btn => {
+            btn.disabled = true;
+            if (btn.textContent === ex.answer) btn.classList.add("correct");
+          });
+          if (!correct) b.classList.add("incorrect");
+          feedbackEl.textContent = correct
+            ? `Benar! "${ex.sentence}"`
+            : `Kurang tepat. Kalimatnya: "${ex.sentence}"`;
           feedbackEl.className = "quiz-feedback " + (correct ? "correct" : "incorrect");
           nextQuizQuestion(correct);
         });
