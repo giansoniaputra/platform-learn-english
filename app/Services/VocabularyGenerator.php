@@ -11,7 +11,7 @@ class VocabularyGenerator
     public function __construct(private readonly OpenAiClient $openAi) {}
 
     /**
-     * @return array{ok: true, words: Collection<int, Word>}|array{ok: false, error: string, status: int}
+     * @return array{ok: true, words: Collection<int, Word>, usage: int}|array{ok: false, error: string, status: int}
      */
     public function generate(Keyword $keyword, int $count = 10): array
     {
@@ -85,6 +85,6 @@ class VocabularyGenerator
             'verb3' => $item['verb3'] ?? null,
         ]));
 
-        return ['ok' => true, 'words' => $words];
+        return ['ok' => true, 'words' => $words, 'usage' => $result['usage']];
     }
 }

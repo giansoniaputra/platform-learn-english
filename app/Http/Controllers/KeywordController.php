@@ -24,8 +24,20 @@ class KeywordController extends Controller
         $keyword = Keyword::findOrCreateByTerm($request->user(), $validated['term']);
 
         if ($keyword->wasRecentlyCreated) {
+            if (! $request->user()->hasTokenBudget()) {
+                $keyword->delete();
+
+                return redirect()
+                    ->route('dashboard')
+                    ->with('status', 'Batas token kamu sudah habis. Hubungi admin untuk menambah token.');
+            }
+
             $wordsResult = $this->vocabulary->generate($keyword, 10);
             $topicResult = $this->conversation->generate($keyword);
+
+            $request->user()->recordTokenUsage(
+                ($wordsResult['usage'] ?? 0) + ($topicResult['usage'] ?? 0)
+            );
 
             if (! Keyword::where('user_id', $request->user()->id)->where('is_active', true)->exists()) {
                 $keyword->update(['is_active' => true]);

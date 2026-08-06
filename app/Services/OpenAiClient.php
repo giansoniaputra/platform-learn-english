@@ -12,7 +12,7 @@ class OpenAiClient
      * Call the OpenAI Chat Completions API with a strict JSON schema and
      * return the parsed response body.
      *
-     * @return array{ok: true, data: array}|array{ok: false, error: string, status: int}
+     * @return array{ok: true, data: array, usage: int}|array{ok: false, error: string, status: int}
      */
     public function generate(
         string $system,
@@ -73,6 +73,6 @@ class OpenAiClient
             return ['ok' => false, 'error' => 'Format hasil AI tidak terbaca.', 'status' => 502];
         }
 
-        return ['ok' => true, 'data' => $data];
+        return ['ok' => true, 'data' => $data, 'usage' => (int) ($response->json('usage.total_tokens') ?? 0)];
     }
 }

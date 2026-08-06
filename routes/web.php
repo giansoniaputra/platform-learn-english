@@ -58,5 +58,6 @@ Route::middleware('auth')->group(function () {
     Route::middleware('admin')->group(function () {
         Route::get('/dashboard/users', [UserManagementController::class, 'index'])->name('dashboard.users');
         Route::post('/dashboard/users', [UserManagementController::class, 'store'])->name('dashboard.users.store');
+        Route::post('/dashboard/users/{user}/tokens', [UserManagementController::class, 'grantTokens'])->name('dashboard.users.tokens');
     });
 });

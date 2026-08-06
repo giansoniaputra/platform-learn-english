@@ -29,6 +29,10 @@ class DashboardController extends Controller
             'words' => $selected?->words()->orderBy('id')->get() ?? collect(),
             'topics' => $selected?->topics()->orderBy('id')->get() ?? collect(),
             'exerciseCounts' => $exerciseCounts,
+            'tokenUsage' => $request->user()->isAdmin() ? null : [
+                'used' => $request->user()->tokens_used,
+                'limit' => $request->user()->token_limit,
+            ],
         ]);
     }
 }

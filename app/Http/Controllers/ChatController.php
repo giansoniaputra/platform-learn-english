@@ -30,6 +30,10 @@ class ChatController extends Controller
         $topic = Topic::findOrFail($validated['topic_id']);
         abort_unless($topic->keyword->user_id === $request->user()->id, 403);
 
+        if (! $request->user()->hasTokenBudget()) {
+            return response()->json(['error' => 'Batas token kamu sudah habis. Hubungi admin untuk menambah token.'], 403);
+        }
+
         $partner = $validated['partner'];
         $inputLanguageLabel = ($validated['input_language'] ?? 'en') === 'id' ? 'Bahasa Indonesia' : 'Bahasa Inggris';
 
@@ -101,6 +105,8 @@ class ChatController extends Controller
         if (! isset($data['message_en'], $data['message_translation'], $data['reply'], $data['translation'])) {
             return response()->json(['error' => 'Format balasan AI tidak terbaca.'], 502);
         }
+
+        $request->user()->recordTokenUsage($result['usage']);
 
         $session = ($validated['session_id'] ?? null)
             ? ChatSession::where('id', $validated['session_id'])->where('topic_id', $validated['topic_id'])->first()

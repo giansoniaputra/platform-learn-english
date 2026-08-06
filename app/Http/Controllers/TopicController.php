@@ -12,13 +12,19 @@ class TopicController extends Controller
 {
     public function __construct(private readonly ConversationGenerator $conversation) {}
 
-    public function generateMore(Keyword $keyword): JsonResponse
+    public function generateMore(Request $request, Keyword $keyword): JsonResponse
     {
+        if (! $request->user()->hasTokenBudget()) {
+            return response()->json(['error' => 'Batas token kamu sudah habis. Hubungi admin untuk menambah token.'], 403);
+        }
+
         $result = $this->conversation->generate($keyword);
 
         if (! $result['ok']) {
             return response()->json(['error' => $result['error']], $result['status']);
         }
+
+        $request->user()->recordTokenUsage($result['usage']);
 
         /** @var Topic $topic */
         $topic = $result['topic'];

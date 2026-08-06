@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -37,5 +38,22 @@ class UserManagementController extends Controller
         return redirect()
             ->route('dashboard.users')
             ->with('status', 'Akun "'.$validated['name'].'" berhasil dibuat.');
+    }
+
+    public function grantTokens(Request $request, User $user): JsonResponse
+    {
+        $validated = $request->validate([
+            'amount_usd' => ['required', 'numeric', 'min:0.01'],
+        ]);
+
+        $pricePerMillion = config('services.openai.token_price_per_million');
+        $tokens = (int) round($validated['amount_usd'] * 1_000_000 / $pricePerMillion);
+
+        $user->increment('token_limit', $tokens);
+
+        return response()->json([
+            'token_limit' => $user->token_limit,
+            'tokens_used' => $user->tokens_used,
+        ]);
     }
 }

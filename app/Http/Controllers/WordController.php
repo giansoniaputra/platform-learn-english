@@ -12,13 +12,19 @@ class WordController extends Controller
 {
     public function __construct(private readonly VocabularyGenerator $vocabulary) {}
 
-    public function generateMore(Keyword $keyword): JsonResponse
+    public function generateMore(Request $request, Keyword $keyword): JsonResponse
     {
+        if (! $request->user()->hasTokenBudget()) {
+            return response()->json(['error' => 'Batas token kamu sudah habis. Hubungi admin untuk menambah token.'], 403);
+        }
+
         $result = $this->vocabulary->generate($keyword, 10);
 
         if (! $result['ok']) {
             return response()->json(['error' => $result['error']], $result['status']);
         }
+
+        $request->user()->recordTokenUsage($result['usage']);
 
         return response()->json([
             'words' => $result['words']->map(fn (Word $word) => [

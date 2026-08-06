@@ -54,6 +54,16 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
+    public function hasTokenBudget(): bool
+    {
+        return $this->isAdmin() || $this->tokens_used < $this->token_limit;
+    }
+
+    public function recordTokenUsage(int $tokens): void
+    {
+        $this->increment('tokens_used', $tokens);
+    }
+
     public function keywords(): HasMany
     {
         return $this->hasMany(Keyword::class);

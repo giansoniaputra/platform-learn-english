@@ -28,6 +28,10 @@ class SentenceCheckController extends Controller
             return response()->json($cached->toApp());
         }
 
+        if (! $request->user()->hasTokenBudget()) {
+            return response()->json(['error' => 'Batas token kamu sudah habis. Hubungi admin untuk menambah token.'], 403);
+        }
+
         $inputLanguageLabel = $inputLanguage === 'id' ? 'Bahasa Indonesia' : 'Bahasa Inggris';
 
         $system = <<<PROMPT
@@ -86,6 +90,8 @@ class SentenceCheckController extends Controller
         if (! isset($data['output_en'], $data['explanation']) || ! array_key_exists('is_correct', $data)) {
             return response()->json(['error' => 'Format hasil AI tidak terbaca.'], 502);
         }
+
+        $request->user()->recordTokenUsage($result['usage']);
 
         $record = SentenceCheck::create([
             'user_id' => $request->user()->id,

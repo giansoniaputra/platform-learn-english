@@ -3,6 +3,25 @@
 @section('title', 'Dashboard')
 
 @section('content')
+  @if ($tokenUsage)
+    <div class="card progress-card" style="margin-bottom:20px">
+      <div class="progress-head">
+        <div class="count">{{ number_format($tokenUsage['used']) }}<small>/{{ number_format($tokenUsage['limit']) }} token</small></div>
+        <div class="eyebrow">Pemakaian token</div>
+      </div>
+      <div class="bar"><i style="width:{{ $tokenUsage['limit'] > 0 ? min(100, round($tokenUsage['used'] / $tokenUsage['limit'] * 100)) : 0 }}%"></i></div>
+      <p class="bar-note">
+        @if ($tokenUsage['limit'] === 0)
+          Belum ada kuota token — hubungi admin untuk mendapatkan token.
+        @elseif ($tokenUsage['used'] >= $tokenUsage['limit'])
+          Kuota token kamu sudah habis. Hubungi admin untuk menambah token.
+        @else
+          {{ number_format($tokenUsage['limit'] - $tokenUsage['used']) }} token tersisa.
+        @endif
+      </p>
+    </div>
+  @endif
+
   <form class="keyword-form" method="POST" action="{{ route('dashboard.keywords.store') }}" id="keyword-form">
     @csrf
     <input type="text" name="term" placeholder="Ketik kunci, mis. &quot;pekerjaan&quot;" required

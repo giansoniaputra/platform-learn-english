@@ -10,7 +10,7 @@ class ConversationGenerator
     public function __construct(private readonly OpenAiClient $openAi) {}
 
     /**
-     * @return array{ok: true, topic: Topic}|array{ok: false, error: string, status: int}
+     * @return array{ok: true, topic: Topic, usage: int}|array{ok: false, error: string, status: int}
      */
     public function generate(Keyword $keyword): array
     {
@@ -90,6 +90,6 @@ class ConversationGenerator
             'keys' => $data['keys'] ?? [],
         ]);
 
-        return ['ok' => true, 'topic' => $topic];
+        return ['ok' => true, 'topic' => $topic, 'usage' => $result['usage']];
     }
 }

@@ -37,6 +37,7 @@ return [
 
     'openai' => [
         'api_key' => env('OPENAI_KEY'),
+        'token_price_per_million' => (float) env('OPENAI_TOKEN_PRICE_PER_MILLION', 0.375),
     ],
 
 ];
