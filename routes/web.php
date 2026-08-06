@@ -5,6 +5,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExerciseController;
 use App\Http\Controllers\KeywordController;
+use App\Http\Controllers\SentenceCheckController;
 use App\Http\Controllers\TopicController;
 use App\Http\Controllers\TtsController;
 use App\Http\Controllers\WordController;
@@ -37,6 +38,7 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/api/percakapan/chat', [ChatController::class, 'reply'])->name('percakapan.chat');
     Route::post('/api/tts', [TtsController::class, 'speak'])->name('tts.speak');
+    Route::post('/api/sentence-check', [SentenceCheckController::class, 'check'])->name('sentence-check');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('/dashboard/keywords', [KeywordController::class, 'store'])->name('dashboard.keywords.store');

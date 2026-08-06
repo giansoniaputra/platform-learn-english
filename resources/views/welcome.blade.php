@@ -134,6 +134,29 @@
       <div class="scroll" id="latihan-body"></div>
     </section>
 
+    <!-- ============ CEK KALIMAT ============ -->
+    <section class="screen" id="cek">
+      <header class="topbar">
+        <div>
+          <div class="day">Latihan bebas</div>
+          <h2>Cek Kalimat</h2>
+        </div>
+      </header>
+      <div class="scroll">
+        <p style="font-size:13px;color:var(--ink-soft);margin-bottom:14px">Ketik kalimat apapun yang ingin kamu cek atau terjemahkan — bebas topik, tidak terikat kunci manapun.</p>
+        <div class="ai-lang-toggle" id="cek-lang-toggle" role="group" aria-label="Bahasa yang kamu ketik">
+          <button type="button" class="lang-btn on" data-lang="en">Bahasa Inggris</button>
+          <button type="button" class="lang-btn" data-lang="id">Bahasa Indonesia</button>
+        </div>
+        <div class="ai-input-row" style="margin-top:10px">
+          <input type="text" id="cek-input" placeholder="Ketik kalimatmu dalam Bahasa Inggris..." autocomplete="off">
+          <button class="btn" id="cek-send" type="button">Cek</button>
+        </div>
+        <p class="ai-status" id="cek-status" aria-live="polite"></p>
+        <div id="cek-results"></div>
+      </div>
+    </section>
+
     <!-- ============ NAV ============ -->
     <nav class="tabbar" id="tabbar">
       <button data-go="beranda" class="on">
@@ -162,6 +185,13 @@
           <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
         </svg>
         Latihan
+      </button>
+      <button data-go="cek">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h8M7 4v2c0 3.5-2 6-5 7" />
+          <path d="m14 21 4-9 4 9M15.5 18h5" />
+        </svg>
+        Cek
       </button>
     </nav>
   </div>
@@ -821,6 +851,83 @@
         nextQuizQuestion(correct);
       });
     }
+
+    /* ---------------- cek kalimat (freeform translate/grammar check) ---------------- */
+    let cekLang = "en";
+    const cekInput = document.getElementById("cek-input");
+    const cekSendBtn = document.getElementById("cek-send");
+    const cekStatusEl = document.getElementById("cek-status");
+    const cekResultsEl = document.getElementById("cek-results");
+
+    document.querySelectorAll("#cek-lang-toggle .lang-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        cekLang = btn.dataset.lang;
+        document.querySelectorAll("#cek-lang-toggle .lang-btn").forEach(b => b.classList.toggle("on", b === btn));
+        cekInput.placeholder = cekLang === "id"
+          ? "Ketik kalimatmu dalam Bahasa Indonesia..."
+          : "Ketik kalimatmu dalam Bahasa Inggris...";
+      });
+    });
+
+    function cekResultHtml(inputText, data) {
+      const badge = data.is_correct === true
+        ? `<span class="cek-badge cek-badge-correct">Sudah benar</span>`
+        : data.is_correct === false
+          ? `<span class="cek-badge cek-badge-incorrect">Perlu diperbaiki</span>`
+          : "";
+      return `
+      <div class="card cek-result">
+        <p class="cek-input">"${escapeHtml(inputText)}"</p>
+        <div class="cek-output">
+          <p>${escapeHtml(data.output_en)}${speakBtnHtml("speak-btn-inline")}</p>
+          ${badge}
+        </div>
+        <p class="cek-explanation">${escapeHtml(data.explanation)}</p>
+      </div>`;
+    }
+
+    async function sendCekMessage() {
+      const text = cekInput.value.trim();
+      if (!text || cekSendBtn.disabled) return;
+
+      cekInput.value = "";
+      cekInput.disabled = true;
+      cekSendBtn.disabled = true;
+      cekStatusEl.textContent = "Memeriksa...";
+
+      try {
+        const res = await fetch("/api/sentence-check", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+          },
+          body: JSON.stringify({ text, input_language: cekLang }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Terjadi kesalahan.");
+
+        cekResultsEl.insertAdjacentHTML("afterbegin", cekResultHtml(text, data));
+        const speakBtn = cekResultsEl.querySelector(".speak-btn");
+        speakBtn.addEventListener("click", () => speak(data.output_en, speakBtn));
+
+        cekStatusEl.textContent = "";
+      } catch (err) {
+        cekStatusEl.textContent = err.message || "Gagal memeriksa kalimat. Coba lagi.";
+        cekInput.value = text;
+      } finally {
+        cekInput.disabled = false;
+        cekSendBtn.disabled = false;
+        cekInput.focus();
+      }
+    }
+
+    cekSendBtn.addEventListener("click", sendCekMessage);
+    cekInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); sendCekMessage(); }
+    });
 
   </script>
 </body>
