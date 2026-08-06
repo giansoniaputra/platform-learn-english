@@ -98,4 +98,18 @@ class SentenceCheckController extends Controller
 
         return response()->json($record->toApp());
     }
+
+    public function history(Request $request): JsonResponse
+    {
+        $page = max(1, (int) $request->query('page', 1));
+
+        $paginator = SentenceCheck::orderByDesc('id')->paginate(10, ['*'], 'page', $page);
+
+        return response()->json([
+            'data' => $paginator->getCollection()->map->toHistoryApp(),
+            'current_page' => $paginator->currentPage(),
+            'last_page' => $paginator->lastPage(),
+            'total' => $paginator->total(),
+        ]);
+    }
 }
