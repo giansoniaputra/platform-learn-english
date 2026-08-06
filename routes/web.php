@@ -5,6 +5,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExerciseController;
 use App\Http\Controllers\KeywordController;
+use App\Http\Controllers\MovieBreakdownController;
 use App\Http\Controllers\SentenceCheckController;
 use App\Http\Controllers\TopicController;
 use App\Http\Controllers\TtsController;
@@ -46,6 +47,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/tts', [TtsController::class, 'speak'])->name('tts.speak');
     Route::post('/api/sentence-check', [SentenceCheckController::class, 'check'])->name('sentence-check');
     Route::get('/api/sentence-check/history', [SentenceCheckController::class, 'history'])->name('sentence-check.history');
+    Route::post('/api/movie-breakdown', [MovieBreakdownController::class, 'check'])->name('movie-breakdown');
+    Route::get('/api/movie-breakdown/history', [MovieBreakdownController::class, 'history'])->name('movie-breakdown.history');
+    Route::get('/api/movie-breakdown/{movieBreakdown}', [MovieBreakdownController::class, 'show'])->name('movie-breakdown.show');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('/dashboard/keywords', [KeywordController::class, 'store'])->name('dashboard.keywords.store');

@@ -175,6 +175,51 @@
       </div>
     </section>
 
+    <!-- ============ BEDAH FILM ============ -->
+    <section class="screen" id="film">
+      <header class="topbar">
+        <div>
+          <div class="day">Latihan bebas</div>
+          <h2>Bedah Film</h2>
+        </div>
+      </header>
+      <div class="scroll">
+        <div id="film-form-view">
+          <p style="font-size:13px;color:var(--ink-soft);margin-bottom:14px">Sebutkan judul film dan adegannya — AI merekonstruksi dialognya dan membedah tiap barisnya buat belajar.</p>
+
+          <div class="field">
+            <label for="film-title">Judul Film</label>
+            <input type="text" id="film-title" placeholder="mis. Titanic" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="film-scene">Deskripsi Adegan</label>
+            <input type="text" id="film-scene" placeholder="mis. adegan di haluan kapal" autocomplete="off">
+          </div>
+
+          <div class="ai-input-row" style="margin-top:4px">
+            <button class="btn" id="film-send" type="button" style="flex:1;width:auto">Bedah Adegan</button>
+            <button type="button" class="cek-history-btn" id="film-history-open" aria-label="Lihat riwayat">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1 0 3-6.7" />
+                <path d="M3 4v5h5" />
+                <path d="M12 7v5l4 2" />
+              </svg>
+            </button>
+          </div>
+          <p style="font-size:11.5px;color:var(--ink-soft);margin-top:10px;line-height:1.6">Dialog di bawah adalah rekonstruksi AI berdasarkan pengetahuannya, mungkin tidak 100% sama persis dengan naskah asli film. Untuk kutipan pasti, cek subtitle resmi.</p>
+          <p class="ai-status" id="film-status" aria-live="polite"></p>
+          <div id="film-results"></div>
+        </div>
+
+        <div id="film-history-view" style="display:none">
+          <button type="button" id="film-history-back" class="cek-history-back">← Kembali</button>
+          <input type="text" id="film-history-search" class="cek-history-search" placeholder="Cari judul film..." autocomplete="off">
+          <div id="film-history-list"></div>
+          <div id="film-history-pagination" class="cek-history-pagination"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- ============ NAV ============ -->
     <nav class="tabbar" id="tabbar">
       <button data-go="beranda" class="on">
@@ -210,6 +255,13 @@
           <path d="m14 21 4-9 4 9M15.5 18h5" />
         </svg>
         Cek
+      </button>
+      <button data-go="film">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2.5" y="5.5" width="19" height="13" rx="1.5" />
+          <path d="M2.5 9h19M7 5.5v3.5M12 5.5v3.5M17 5.5v3.5" />
+        </svg>
+        Film
       </button>
     </nav>
   </div>
@@ -1192,6 +1244,188 @@
         cekHistorySearch = cekHistorySearchInput.value.trim();
         loadCekHistory(1);
       }, 350);
+    });
+
+    /* ---------------- bedah film ---------------- */
+    const filmFormView = document.getElementById("film-form-view");
+    const filmHistoryView = document.getElementById("film-history-view");
+    const filmHistoryList = document.getElementById("film-history-list");
+    const filmHistoryPagination = document.getElementById("film-history-pagination");
+    const filmHistorySearchInput = document.getElementById("film-history-search");
+    let filmHistorySearchTimer = null;
+
+    function breakdownLineHtml(l) {
+      const notes = [
+        l.vocab_notes ? `<div class="breakdown-note"><b>Kosakata</b><span>${escapeHtml(l.vocab_notes)}</span></div>` : "",
+        l.grammar_notes ? `<div class="breakdown-note"><b>Grammar</b><span>${escapeHtml(l.grammar_notes)}</span></div>` : "",
+        l.tone ? `<div class="breakdown-note"><b>Nada</b><span>${escapeHtml(l.tone)}</span></div>` : "",
+      ].join("");
+      return `
+      <div class="line show">
+        <div class="who">${escapeHtml(l.speaker)}</div>
+        <div class="bubble"><p>${escapeHtml(l.en)}${speakBtnHtml("speak-btn-inline")}</p><div class="trans">${escapeHtml(l.translation)}</div></div>
+        ${notes}
+      </div>`;
+    }
+
+    function bindBreakdownSpeakButtons(container, lines) {
+      container.querySelectorAll(".line").forEach((lineEl, i) => {
+        const speakBtn = lineEl.querySelector(".speak-btn");
+        if (speakBtn && lines[i]) {
+          speakBtn.addEventListener("click", () => speak(lines[i].en, speakBtn));
+        }
+      });
+    }
+
+    function filmResultHtml(movieTitle, sceneDescription, data) {
+      return `
+      <div class="card film-result">
+        <p class="cek-input">"${escapeHtml(movieTitle)} — ${escapeHtml(sceneDescription)}"</p>
+        ${data.scene_summary ? `<p class="breakdown-summary">${escapeHtml(data.scene_summary)}</p>` : ""}
+        <div class="breakdown-lines">${data.lines.map(breakdownLineHtml).join("")}</div>
+      </div>`;
+    }
+
+    async function sendFilmBreakdown() {
+      const titleInput = document.getElementById("film-title");
+      const sceneInput = document.getElementById("film-scene");
+      const sendBtn = document.getElementById("film-send");
+      const statusEl = document.getElementById("film-status");
+      const resultsEl = document.getElementById("film-results");
+
+      const movieTitle = titleInput.value.trim();
+      const sceneDescription = sceneInput.value.trim();
+      if (!movieTitle || !sceneDescription || sendBtn.disabled) return;
+
+      titleInput.value = "";
+      sceneInput.value = "";
+      sendBtn.disabled = true;
+      statusEl.textContent = "Merekonstruksi & membedah adegan...";
+
+      try {
+        const res = await fetch("/api/movie-breakdown", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+          },
+          body: JSON.stringify({ movie_title: movieTitle, scene_description: sceneDescription }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Terjadi kesalahan.");
+
+        resultsEl.insertAdjacentHTML("afterbegin", filmResultHtml(movieTitle, sceneDescription, data));
+        bindBreakdownSpeakButtons(resultsEl.firstElementChild, data.lines);
+
+        statusEl.textContent = "";
+      } catch (err) {
+        statusEl.textContent = err.message || "Gagal membedah adegan. Coba lagi.";
+        titleInput.value = movieTitle;
+        sceneInput.value = sceneDescription;
+      } finally {
+        sendBtn.disabled = false;
+      }
+    }
+
+    function filmHistoryRowHtml(item) {
+      return `
+      <button type="button" class="cek-history-row" data-id="${item.id}">
+        <span class="cek-history-text">${escapeHtml(item.movie_title)} — ${escapeHtml(item.scene_description)}</span>
+      </button>`;
+    }
+
+    function renderFilmHistoryPagination(current, last) {
+      if (last <= 1) {
+        filmHistoryPagination.innerHTML = "";
+        return;
+      }
+      filmHistoryPagination.innerHTML = `
+        <button type="button" id="film-history-prev" ${current <= 1 ? "disabled" : ""}>← Sebelumnya</button>
+        <span>${current} / ${last}</span>
+        <button type="button" id="film-history-next" ${current >= last ? "disabled" : ""}>Berikutnya →</button>`;
+      document.getElementById("film-history-prev").addEventListener("click", () => loadFilmHistory(current - 1));
+      document.getElementById("film-history-next").addEventListener("click", () => loadFilmHistory(current + 1));
+    }
+
+    async function loadFilmHistory(page) {
+      filmHistoryList.innerHTML = `<p style="font-size:13px;color:var(--ink-soft)">Memuat...</p>`;
+      filmHistoryPagination.innerHTML = "";
+
+      try {
+        const params = new URLSearchParams({ page });
+        const search = filmHistorySearchInput.value.trim();
+        if (search) params.set("search", search);
+
+        const res = await fetch(`/api/movie-breakdown/history?${params}`, {
+          headers: { "Accept": "application/json" },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Gagal memuat riwayat.");
+
+        if (data.data.length === 0) {
+          const emptyMessage = search ? "Tidak ada riwayat yang cocok dengan pencarianmu." : "Belum ada riwayat bedah film.";
+          filmHistoryList.innerHTML = `<div class="card"><p style="font-size:14px;color:var(--ink-soft)">${emptyMessage}</p></div>`;
+          return;
+        }
+
+        filmHistoryList.innerHTML = data.data.map(filmHistoryRowHtml).join("");
+        filmHistoryList.querySelectorAll(".cek-history-row").forEach(row => {
+          row.addEventListener("click", () => openFilmHistoryEntry(row.dataset.id));
+        });
+
+        renderFilmHistoryPagination(data.current_page, data.last_page);
+      } catch (err) {
+        filmHistoryList.innerHTML = `<p style="font-size:13px;color:var(--stamp)">${escapeHtml(err.message)}</p>`;
+      }
+    }
+
+    async function openFilmHistoryEntry(id) {
+      try {
+        const res = await fetch(`/api/movie-breakdown/${id}`, {
+          headers: { "Accept": "application/json" },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Gagal memuat breakdown.");
+
+        const phone = document.querySelector(".phone");
+        const overlay = document.createElement("div");
+        overlay.className = "cek-modal-overlay";
+        overlay.innerHTML = `
+          <div class="card cek-modal chat-session-modal">
+            <button type="button" class="cek-modal-close" aria-label="Tutup">×</button>
+            <p class="cek-input">"${escapeHtml(data.movie_title)} — ${escapeHtml(data.scene_description)}"</p>
+            ${data.scene_summary ? `<p class="breakdown-summary">${escapeHtml(data.scene_summary)}</p>` : ""}
+            <div class="breakdown-lines">${data.lines.map(breakdownLineHtml).join("")}</div>
+          </div>`;
+        phone.appendChild(overlay);
+
+        const close = () => overlay.remove();
+        overlay.querySelector(".cek-modal-close").addEventListener("click", close);
+        overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
+        bindBreakdownSpeakButtons(overlay, data.lines);
+      } catch (err) {
+        alert(err.message || "Gagal memuat breakdown.");
+      }
+    }
+
+    document.getElementById("film-send").addEventListener("click", sendFilmBreakdown);
+
+    document.getElementById("film-history-open").addEventListener("click", () => {
+      filmFormView.style.display = "none";
+      filmHistoryView.style.display = "block";
+      filmHistorySearchInput.value = "";
+      loadFilmHistory(1);
+    });
+
+    document.getElementById("film-history-back").addEventListener("click", () => {
+      filmHistoryView.style.display = "none";
+      filmFormView.style.display = "block";
+    });
+
+    filmHistorySearchInput.addEventListener("input", () => {
+      clearTimeout(filmHistorySearchTimer);
+      filmHistorySearchTimer = setTimeout(() => loadFilmHistory(1), 350);
     });
 
   </script>

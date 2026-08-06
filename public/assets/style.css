@@ -1007,6 +1007,45 @@ h3 {
     font-style: italic;
 }
 
+/* ---------- bedah film ---------- */
+.film-result {
+    margin-top: 12px;
+}
+
+.breakdown-summary {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    font-style: italic;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px dashed var(--rule);
+}
+
+.breakdown-lines .line:last-child {
+    margin-bottom: 0;
+}
+
+.breakdown-note {
+    margin-top: 6px;
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
+.breakdown-note b {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--marker-deep);
+    margin-right: 6px;
+}
+
+.breakdown-note span {
+    color: var(--ink-soft);
+}
+
 /* ---------- text-to-speech buttons ---------- */
 .speak-btn {
     border: none;
@@ -1057,7 +1096,7 @@ h3 {
     height: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
     padding-bottom: env(safe-area-inset-bottom);
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     background: rgba(247, 247, 251, .94);
     backdrop-filter: blur(10px);
     border-top: 1px solid var(--rule);

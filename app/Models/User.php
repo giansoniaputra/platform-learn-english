@@ -73,4 +73,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(SentenceCheck::class);
     }
+
+    public function movieBreakdowns(): HasMany
+    {
+        return $this->hasMany(MovieBreakdown::class);
+    }
 }
