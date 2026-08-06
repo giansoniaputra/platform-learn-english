@@ -25,7 +25,9 @@
           <h2>Halo, {{ explode(' ', auth()->user()->name)[0] }}.</h2>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
-          <div class="streak"><b>11</b><small>hari</small></div>
+          @if ($tokenUsage)
+            <span class="keyword-active-badge">{{ number_format($tokenUsage['used']) }}/{{ number_format($tokenUsage['limit']) }} token</span>
+          @endif
           <form method="POST" action="{{ route('logout') }}">
             @csrf
             <button class="dashboard-logout" type="submit" style="padding:7px 10px">Keluar</button>

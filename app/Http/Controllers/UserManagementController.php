@@ -56,4 +56,13 @@ class UserManagementController extends Controller
             'tokens_used' => $user->tokens_used,
         ]);
     }
+
+    public function destroy(User $user): JsonResponse
+    {
+        abort_if($user->isAdmin(), 403, 'Akun admin tidak bisa dihapus lewat sini.');
+
+        $user->delete();
+
+        return response()->json(['ok' => true]);
+    }
 }

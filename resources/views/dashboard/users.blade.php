@@ -45,7 +45,7 @@
 
   <div class="section-label" style="margin-top:30px"><div class="eyebrow">Semua Pengguna ({{ $users->count() }})</div><hr></div>
   @foreach ($users as $u)
-    <div class="data-row">
+    <div class="data-row" data-user-row="{{ $u->id }}">
       <div class="meta">
         <b>{{ $u->name }}</b>
         <span>{{ $u->email }}</span>
@@ -57,6 +57,7 @@
         <span class="keyword-active-badge">{{ strtoupper($u->role) }}</span>
         @unless ($u->isAdmin())
           <button type="button" class="token-grant-btn" data-user-id="{{ $u->id }}" data-user-name="{{ $u->name }}">+ Token</button>
+          <button type="button" class="danger user-delete-btn" data-user-id="{{ $u->id }}" data-user-name="{{ $u->name }}">Hapus</button>
         @endunless
       </div>
     </div>
@@ -134,6 +135,34 @@
       } catch (err) {
         tokenModalStatus.textContent = err.message;
       }
+    });
+
+    document.querySelectorAll('.user-delete-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const userId = btn.dataset.userId;
+        if (!confirm(`Hapus akun "${btn.dataset.userName}"? Semua kunci, kosakata, percakapan, dan riwayat milik akun ini akan ikut terhapus permanen.`)) {
+          return;
+        }
+
+        btn.disabled = true;
+
+        try {
+          const res = await fetch(`/dashboard/users/${userId}`, {
+            method: 'DELETE',
+            headers: {
+              'Accept': 'application/json',
+              'X-CSRF-TOKEN': tokenCsrfToken,
+            },
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Gagal menghapus akun.');
+
+          document.querySelector(`[data-user-row="${userId}"]`)?.remove();
+        } catch (err) {
+          alert(err.message);
+          btn.disabled = false;
+        }
+      });
     });
   </script>
 @endsection

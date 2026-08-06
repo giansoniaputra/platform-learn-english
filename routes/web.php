@@ -33,6 +33,10 @@ Route::middleware('auth')->group(function () {
             'words' => $keyword ? $keyword->words()->orderBy('id')->get()->map->toApp() : collect(),
             'topics' => $topics->values()->map(fn ($topic, $i) => $topic->toApp($i + 1)),
             'exercises' => $exercises->map->toApp(),
+            'tokenUsage' => auth()->user()->isAdmin() ? null : [
+                'used' => auth()->user()->tokens_used,
+                'limit' => auth()->user()->token_limit,
+            ],
         ]);
     })->name('app');
 
@@ -59,5 +63,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/dashboard/users', [UserManagementController::class, 'index'])->name('dashboard.users');
         Route::post('/dashboard/users', [UserManagementController::class, 'store'])->name('dashboard.users.store');
         Route::post('/dashboard/users/{user}/tokens', [UserManagementController::class, 'grantTokens'])->name('dashboard.users.tokens');
+        Route::delete('/dashboard/users/{user}', [UserManagementController::class, 'destroy'])->name('dashboard.users.destroy');
     });
 });
