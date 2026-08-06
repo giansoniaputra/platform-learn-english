@@ -15,7 +15,7 @@ class ExerciseGenerator
      * (example sentences, translations, sibling words for distractors) is
      * already sitting in the `words` table.
      *
-     * @return array{arrange: int, fill_blank: int, match_meaning: int, listening: int}
+     * @return array{arrange: int, fill_blank: int, match_meaning: int, listening: int, dictation: int}
      */
     public function generate(Keyword $keyword): array
     {
@@ -26,13 +26,18 @@ class ExerciseGenerator
             fn (Exercise $e) => $e->word_id === $wordId && $e->type === $type
         );
 
-        $created = ['arrange' => 0, 'fill_blank' => 0, 'match_meaning' => 0, 'listening' => 0];
+        $created = ['arrange' => 0, 'fill_blank' => 0, 'match_meaning' => 0, 'listening' => 0, 'dictation' => 0];
         $enoughForDistractors = $words->count() >= 4;
 
         foreach ($words as $word) {
             if (! $hasExercise($word->id, 'arrange') && $data = $this->buildArrange($word)) {
                 $this->store($keyword, $word, 'arrange', $data);
                 $created['arrange']++;
+            }
+
+            if (! $hasExercise($word->id, 'dictation') && $data = $this->buildDictation($word)) {
+                $this->store($keyword, $word, 'dictation', $data);
+                $created['dictation']++;
             }
 
             if (! $enoughForDistractors) {
@@ -182,6 +187,23 @@ class ExerciseGenerator
             'sentence' => $word->example,
             'answer' => $word->example_translation,
             'options' => $distractors->push($word->example_translation)->shuffle()->values()->all(),
+        ];
+    }
+
+    /**
+     * Dictation: play the example sentence's TTS and have the learner type
+     * back exactly what they heard — checked leniently (case/punctuation
+     * insensitive) on the frontend. Same audio cache as every other type.
+     */
+    private function buildDictation(Word $word): ?array
+    {
+        if (! $word->example) {
+            return null;
+        }
+
+        return [
+            'sentence' => $word->example,
+            'translation' => $word->example_translation,
         ];
     }
 }

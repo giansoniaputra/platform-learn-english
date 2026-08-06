@@ -71,6 +71,7 @@
         <div><b>{{ $exerciseCounts['fill_blank'] ?? 0 }}</b><span>Lengkapi kalimat</span></div>
         <div><b>{{ $exerciseCounts['match_meaning'] ?? 0 }}</b><span>Padankan arti</span></div>
         <div><b>{{ $exerciseCounts['listening'] ?? 0 }}</b><span>Menyimak</span></div>
+        <div><b>{{ $exerciseCounts['dictation'] ?? 0 }}</b><span>Dikte</span></div>
       </div>
       <form method="POST" action="{{ route('dashboard.exercises.generate', $selected) }}" style="margin-top:14px">
         @csrf

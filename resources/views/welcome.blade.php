@@ -511,6 +511,7 @@
       fill_blank: "Lengkapi kalimat",
       match_meaning: "Padankan arti",
       listening: "Menyimak",
+      dictation: "Dikte",
     };
     let quizQueue = [];
     let quizIndex = 0;
@@ -524,6 +525,14 @@
         [a[i], a[j]] = [a[j], a[i]];
       }
       return a;
+    }
+
+    function normalizeDictation(text) {
+      return text
+        .toLowerCase()
+        .trim()
+        .replace(/[.,!?;:"“”'’]/g, "")
+        .replace(/\s+/g, " ");
     }
 
     function showLatihanMenu() {
@@ -591,6 +600,7 @@
       const ex = quizQueue[quizIndex];
       if (ex.type === "arrange") renderArrangeQuestion(ex);
       else if (ex.type === "listening") renderListeningQuestion(ex);
+      else if (ex.type === "dictation") renderDictationQuestion(ex);
       else renderChoiceQuestion(ex);
     }
 
@@ -771,6 +781,44 @@
           nextQuizQuestion(correct);
         });
         optionsEl.appendChild(b);
+      });
+    }
+
+    function renderDictationQuestion(ex) {
+      latihanBody.innerHTML = `
+      ${quizProgressHtml()}
+      <div class="card quiz-card">
+        <div class="quiz-instruction">Dengarkan lalu ketik ulang apa yang kamu dengar</div>
+        <button type="button" class="quiz-listen-btn" id="quiz-listen" aria-label="Putar audio">🔊 Putar audio</button>
+        <input type="text" id="quiz-dictation-input" class="quiz-dictation-input" placeholder="Ketik di sini..."
+          autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+        <p class="quiz-feedback" id="quiz-feedback"></p>
+        <button class="btn" type="button" id="quiz-check" style="width:auto;padding:12px 20px;margin-top:10px" disabled>Cek</button>
+      </div>`;
+
+      const listenBtn = document.getElementById("quiz-listen");
+      listenBtn.addEventListener("click", () => speak(ex.sentence, listenBtn));
+
+      const input = document.getElementById("quiz-dictation-input");
+      const checkBtn = document.getElementById("quiz-check");
+      const feedbackEl = document.getElementById("quiz-feedback");
+
+      input.addEventListener("input", () => {
+        checkBtn.disabled = input.value.trim().length === 0;
+      });
+      input.addEventListener("keydown", e => {
+        if (e.key === "Enter" && !checkBtn.disabled) checkBtn.click();
+      });
+
+      checkBtn.addEventListener("click", () => {
+        const correct = normalizeDictation(input.value) === normalizeDictation(ex.sentence);
+        feedbackEl.textContent = correct
+          ? "Benar! " + (ex.translation || "")
+          : `Kurang tepat. Jawaban: ${ex.sentence}${ex.translation ? " — " + ex.translation : ""}`;
+        feedbackEl.className = "quiz-feedback " + (correct ? "correct" : "incorrect");
+        input.disabled = true;
+        checkBtn.disabled = true;
+        nextQuizQuestion(correct);
       });
     }
 

@@ -1577,7 +1577,7 @@ h3 {
 /* ---------- latihan: dashboard exercise counts ---------- */
 .exercise-counts {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
     gap: 10px;
     margin-top: 14px;
 }
@@ -1647,6 +1647,27 @@ h3 {
 .quiz-listen-btn:disabled {
     opacity: .6;
     cursor: default;
+}
+
+.quiz-dictation-input {
+    width: 100%;
+    font-family: var(--body);
+    font-size: 15px;
+    color: var(--ink);
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 13px 14px;
+}
+
+.quiz-dictation-input:focus {
+    outline: none;
+    border-color: var(--marker-deep);
+    box-shadow: 0 0 0 3px rgba(132, 119, 236, .35)
+}
+
+.quiz-dictation-input:disabled {
+    opacity: .6
 }
 
 .quiz-prompt {
