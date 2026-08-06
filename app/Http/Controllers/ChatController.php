@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ChatSession;
+use App\Models\Topic;
 use App\Services\OpenAiClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,6 +23,8 @@ class ChatController extends Controller
             'history' => ['array', 'max:20'],
             'history.*.role' => ['required_with:history', 'in:user,assistant'],
             'history.*.text' => ['required_with:history', 'string', 'max:1000'],
+            'topic_id' => ['required', 'integer', 'exists:topics,id'],
+            'session_id' => ['nullable', 'integer', 'exists:chat_sessions,id'],
         ]);
 
         $partner = $validated['partner'];
@@ -95,12 +99,61 @@ class ChatController extends Controller
             return response()->json(['error' => 'Format balasan AI tidak terbaca.'], 502);
         }
 
+        $session = ($validated['session_id'] ?? null)
+            ? ChatSession::where('id', $validated['session_id'])->where('topic_id', $validated['topic_id'])->first()
+            : null;
+
+        $session ??= ChatSession::create(['topic_id' => $validated['topic_id']]);
+
+        $session->messages()->create([
+            'role' => 'user',
+            'text' => $data['message_en'],
+            'translation' => $data['message_translation'],
+            'correction' => $data['correction'] ?? null,
+        ]);
+
+        $session->messages()->create([
+            'role' => 'assistant',
+            'text' => $data['reply'],
+            'translation' => $data['translation'],
+        ]);
+
         return response()->json([
+            'session_id' => $session->id,
             'message_en' => $data['message_en'],
             'message_translation' => $data['message_translation'],
             'correction' => $data['correction'] ?? null,
             'reply' => $data['reply'],
             'translation' => $data['translation'],
         ]);
+    }
+
+    public function history(Request $request, Topic $topic): JsonResponse
+    {
+        $page = max(1, (int) $request->query('page', 1));
+        $search = trim((string) $request->query('search', ''));
+
+        $query = $topic->chatSessions()->with('messages')->orderByDesc('id');
+
+        if ($search !== '') {
+            $needle = '%'.mb_strtolower($search).'%';
+            $query->whereHas('messages', function ($q) use ($needle) {
+                $q->whereRaw('LOWER(text) LIKE ?', [$needle]);
+            });
+        }
+
+        $paginator = $query->paginate(10, ['*'], 'page', $page);
+
+        return response()->json([
+            'data' => $paginator->getCollection()->map->toHistoryApp(),
+            'current_page' => $paginator->currentPage(),
+            'last_page' => $paginator->lastPage(),
+            'total' => $paginator->total(),
+        ]);
+    }
+
+    public function showSession(ChatSession $chatSession): JsonResponse
+    {
+        return response()->json($chatSession->toFullApp());
     }
 }

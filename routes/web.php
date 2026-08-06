@@ -37,6 +37,8 @@ Route::middleware('auth')->group(function () {
     })->name('app');
 
     Route::post('/api/percakapan/chat', [ChatController::class, 'reply'])->name('percakapan.chat');
+    Route::get('/api/percakapan/topics/{topic}/chat-history', [ChatController::class, 'history'])->name('percakapan.chat.history');
+    Route::get('/api/percakapan/chat-sessions/{chatSession}', [ChatController::class, 'showSession'])->name('percakapan.chat.session');
     Route::post('/api/tts', [TtsController::class, 'speak'])->name('tts.speak');
     Route::post('/api/sentence-check', [SentenceCheckController::class, 'check'])->name('sentence-check');
     Route::get('/api/sentence-check/history', [SentenceCheckController::class, 'history'])->name('sentence-check.history');

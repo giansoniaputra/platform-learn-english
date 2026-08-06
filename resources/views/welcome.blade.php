@@ -223,6 +223,7 @@
     let showAllTrans = false;
     let quizInProgress = false;
     const aiHistory = {};
+    const chatSessionIds = {};
 
     /* ---------------- navigation ---------------- */
     const screens = document.querySelectorAll(".screen");
@@ -434,11 +435,15 @@
             message: text,
             input_language: inputLanguage,
             history: payloadHistory,
+            topic_id: parseInt(t.id.slice(1), 10),
+            session_id: chatSessionIds[t.id] || null,
           }),
         });
 
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Terjadi kesalahan.");
+
+        chatSessionIds[t.id] = data.session_id;
 
         renderAiLine(els.linesEl, t, "user", data.message_en, {
           translation: data.message_translation,
@@ -466,6 +471,55 @@
       }
     }
 
+    /* ---------------- riwayat percakapan bebas (per kasus) ---------------- */
+    function aiHistoryRowHtml(session) {
+      return `
+      <button type="button" class="cek-history-row" data-id="${session.id}">
+        <span class="cek-history-text">${escapeHtml(session.preview)}</span>
+        <span class="cek-badge cek-badge-neutral">${session.message_count} pesan</span>
+      </button>`;
+    }
+
+    function chatSessionModalHtml(messages, partner) {
+      const lines = messages.map(m => `
+        <div class="line show ${m.role === "user" ? "me" : ""}">
+          <div class="who">${m.role === "user" ? "Kamu" : escapeHtml(partner)}</div>
+          <div class="bubble"><p>${escapeHtml(m.text)}${speakBtnHtml("speak-btn-inline")}</p>${m.translation ? `<div class="trans">${escapeHtml(m.translation)}</div>` : ""}</div>
+          ${m.correction ? `<div class="correction-note">${escapeHtml(m.correction)}</div>` : ""}
+        </div>`).join("");
+      return `
+      <div class="card cek-modal chat-session-modal">
+        <button type="button" class="cek-modal-close" aria-label="Tutup">×</button>
+        <div class="chat-session-lines">${lines}</div>
+      </div>`;
+    }
+
+    async function openAiHistorySession(sessionId, partner) {
+      try {
+        const res = await fetch(`/api/percakapan/chat-sessions/${sessionId}`, {
+          headers: { "Accept": "application/json" },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Gagal memuat percakapan.");
+
+        const phone = document.querySelector(".phone");
+        const overlay = document.createElement("div");
+        overlay.className = "cek-modal-overlay";
+        overlay.innerHTML = chatSessionModalHtml(data.messages, partner);
+        phone.appendChild(overlay);
+
+        const close = () => overlay.remove();
+        overlay.querySelector(".cek-modal-close").addEventListener("click", close);
+        overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
+        overlay.querySelectorAll(".line").forEach((lineEl, i) => {
+          const speakBtn = lineEl.querySelector(".speak-btn");
+          speakBtn.addEventListener("click", () => speak(data.messages[i].text, speakBtn));
+        });
+      } catch (err) {
+        alert(err.message || "Gagal memuat percakapan.");
+      }
+    }
+
     /* ---------------- dialog view ---------------- */
     function openTopic(t) {
       document.getElementById("dlg-title").textContent = t.title;
@@ -484,17 +538,33 @@
     </div>
     <div class="ai-practice">
       <div class="section-label"><div class="eyebrow">Latihan bebas dengan AI</div><hr></div>
-      <p style="font-size:13px;color:var(--ink-soft);margin-bottom:12px">Lanjutkan percakapan dengan ${escapeHtml(t.partner)} — balasan AI ini sungguhan merespons apa yang kamu tulis.</p>
-      <div id="ai-lines"></div>
-      <div class="ai-lang-toggle" role="group" aria-label="Bahasa yang kamu ketik">
-        <button type="button" class="lang-btn on" data-lang="en">Ketik Inggris</button>
-        <button type="button" class="lang-btn" data-lang="id">Ketik Indonesia</button>
+      <div id="ai-form-view">
+        <p style="font-size:13px;color:var(--ink-soft);margin-bottom:12px">Lanjutkan percakapan dengan ${escapeHtml(t.partner)} — balasan AI ini sungguhan merespons apa yang kamu tulis.</p>
+        <div id="ai-lines"></div>
+        <div class="ai-lang-toggle" role="group" aria-label="Bahasa yang kamu ketik">
+          <button type="button" class="lang-btn on" data-lang="en">Ketik Inggris</button>
+          <button type="button" class="lang-btn" data-lang="id">Ketik Indonesia</button>
+        </div>
+        <div class="ai-input-row">
+          <input type="text" id="ai-input" placeholder="Ketik balasanmu dalam Bahasa Inggris..." autocomplete="off">
+          <button class="btn" id="ai-send" type="button">Kirim</button>
+          <button type="button" class="cek-history-btn" id="ai-history-open" aria-label="Lihat riwayat percakapan">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 1 0 3-6.7" />
+              <path d="M3 4v5h5" />
+              <path d="M12 7v5l4 2" />
+            </svg>
+          </button>
+        </div>
+        <p class="ai-status" id="ai-status" aria-live="polite"></p>
       </div>
-      <div class="ai-input-row">
-        <input type="text" id="ai-input" placeholder="Ketik balasanmu dalam Bahasa Inggris..." autocomplete="off">
-        <button class="btn" id="ai-send" type="button">Kirim</button>
+
+      <div id="ai-history-view" style="display:none">
+        <button type="button" id="ai-history-back" class="cek-history-back">← Kembali</button>
+        <input type="text" id="ai-history-search" class="cek-history-search" placeholder="Cari percakapan..." autocomplete="off">
+        <div id="ai-history-list"></div>
+        <div id="ai-history-pagination" class="cek-history-pagination"></div>
       </div>
-      <p class="ai-status" id="ai-status" aria-live="polite"></p>
     </div>`;
 
       const lines = body.querySelector("#lines");
@@ -545,6 +615,76 @@
             ? "Ketik dalam Bahasa Indonesia, nanti diterjemahkan otomatis..."
             : "Ketik balasanmu dalam Bahasa Inggris...";
         });
+      });
+
+      const aiFormView = body.querySelector("#ai-form-view");
+      const aiHistoryView = body.querySelector("#ai-history-view");
+      const aiHistoryListEl = body.querySelector("#ai-history-list");
+      const aiHistoryPaginationEl = body.querySelector("#ai-history-pagination");
+      const aiHistorySearchInput = body.querySelector("#ai-history-search");
+      const topicId = parseInt(t.id.slice(1), 10);
+      let aiHistorySearchTimer = null;
+
+      function renderAiHistoryPagination(current, last) {
+        if (last <= 1) {
+          aiHistoryPaginationEl.innerHTML = "";
+          return;
+        }
+        aiHistoryPaginationEl.innerHTML = `
+          <button type="button" id="ai-history-prev" ${current <= 1 ? "disabled" : ""}>← Sebelumnya</button>
+          <span>${current} / ${last}</span>
+          <button type="button" id="ai-history-next" ${current >= last ? "disabled" : ""}>Berikutnya →</button>`;
+        body.querySelector("#ai-history-prev").addEventListener("click", () => loadAiHistory(current - 1));
+        body.querySelector("#ai-history-next").addEventListener("click", () => loadAiHistory(current + 1));
+      }
+
+      async function loadAiHistory(page) {
+        aiHistoryListEl.innerHTML = `<p style="font-size:13px;color:var(--ink-soft)">Memuat...</p>`;
+        aiHistoryPaginationEl.innerHTML = "";
+
+        try {
+          const params = new URLSearchParams({ page });
+          const search = aiHistorySearchInput.value.trim();
+          if (search) params.set("search", search);
+
+          const res = await fetch(`/api/percakapan/topics/${topicId}/chat-history?${params}`, {
+            headers: { "Accept": "application/json" },
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Gagal memuat riwayat.");
+
+          if (data.data.length === 0) {
+            const emptyMessage = search ? "Tidak ada percakapan yang cocok dengan pencarianmu." : "Belum ada riwayat percakapan untuk kasus ini.";
+            aiHistoryListEl.innerHTML = `<div class="card"><p style="font-size:14px;color:var(--ink-soft)">${emptyMessage}</p></div>`;
+            return;
+          }
+
+          aiHistoryListEl.innerHTML = data.data.map(aiHistoryRowHtml).join("");
+          aiHistoryListEl.querySelectorAll(".cek-history-row").forEach(row => {
+            row.addEventListener("click", () => openAiHistorySession(row.dataset.id, t.partner));
+          });
+
+          renderAiHistoryPagination(data.current_page, data.last_page);
+        } catch (err) {
+          aiHistoryListEl.innerHTML = `<p style="font-size:13px;color:var(--stamp)">${escapeHtml(err.message)}</p>`;
+        }
+      }
+
+      body.querySelector("#ai-history-open").addEventListener("click", () => {
+        aiFormView.style.display = "none";
+        aiHistoryView.style.display = "block";
+        aiHistorySearchInput.value = "";
+        loadAiHistory(1);
+      });
+
+      body.querySelector("#ai-history-back").addEventListener("click", () => {
+        aiHistoryView.style.display = "none";
+        aiFormView.style.display = "block";
+      });
+
+      aiHistorySearchInput.addEventListener("input", () => {
+        clearTimeout(aiHistorySearchTimer);
+        aiHistorySearchTimer = setTimeout(() => loadAiHistory(1), 350);
       });
 
       show("dialog", { tab: "percakapan" });

@@ -1879,6 +1879,14 @@ h3 {
     padding: 4px 8px;
 }
 
+.chat-session-modal {
+    padding-top: 40px;
+}
+
+.chat-session-lines .line:last-child {
+    margin-bottom: 0;
+}
+
 .quiz-prompt {
     font-size: 17px;
     line-height: 1.6;
