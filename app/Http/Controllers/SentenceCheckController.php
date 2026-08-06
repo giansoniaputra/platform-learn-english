@@ -102,8 +102,19 @@ class SentenceCheckController extends Controller
     public function history(Request $request): JsonResponse
     {
         $page = max(1, (int) $request->query('page', 1));
+        $search = trim((string) $request->query('search', ''));
 
-        $paginator = SentenceCheck::orderByDesc('id')->paginate(10, ['*'], 'page', $page);
+        $query = SentenceCheck::orderByDesc('id');
+
+        if ($search !== '') {
+            $needle = '%'.mb_strtolower($search).'%';
+            $query->where(function ($q) use ($needle) {
+                $q->whereRaw('LOWER(input_text) LIKE ?', [$needle])
+                    ->orWhereRaw('LOWER(output_en) LIKE ?', [$needle]);
+            });
+        }
+
+        $paginator = $query->paginate(10, ['*'], 'page', $page);
 
         return response()->json([
             'data' => $paginator->getCollection()->map->toHistoryApp(),

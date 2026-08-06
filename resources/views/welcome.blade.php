@@ -166,6 +166,7 @@
 
         <div id="cek-history-view" style="display:none">
           <button type="button" id="cek-history-back" class="cek-history-back">← Kembali</button>
+          <input type="text" id="cek-history-search" class="cek-history-search" placeholder="Cari kalimat..." autocomplete="off">
           <div id="cek-history-list"></div>
           <div id="cek-history-pagination" class="cek-history-pagination"></div>
         </div>
@@ -944,6 +945,9 @@
     const cekHistoryView = document.getElementById("cek-history-view");
     const cekHistoryList = document.getElementById("cek-history-list");
     const cekHistoryPagination = document.getElementById("cek-history-pagination");
+    const cekHistorySearchInput = document.getElementById("cek-history-search");
+    let cekHistorySearch = "";
+    let cekHistorySearchTimer = null;
 
     function cekBadgeHtml(isCorrect) {
       if (isCorrect === true) return `<span class="cek-badge cek-badge-correct">Sudah benar</span>`;
@@ -977,14 +981,18 @@
       cekHistoryPagination.innerHTML = "";
 
       try {
-        const res = await fetch(`/api/sentence-check/history?page=${page}`, {
+        const params = new URLSearchParams({ page });
+        if (cekHistorySearch) params.set("search", cekHistorySearch);
+
+        const res = await fetch(`/api/sentence-check/history?${params}`, {
           headers: { "Accept": "application/json" },
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Gagal memuat riwayat.");
 
         if (data.data.length === 0) {
-          cekHistoryList.innerHTML = `<div class="card"><p style="font-size:14px;color:var(--ink-soft)">Belum ada riwayat.</p></div>`;
+          const emptyMessage = cekHistorySearch ? "Tidak ada riwayat yang cocok dengan pencarianmu." : "Belum ada riwayat.";
+          cekHistoryList.innerHTML = `<div class="card"><p style="font-size:14px;color:var(--ink-soft)">${emptyMessage}</p></div>`;
           return;
         }
 
@@ -1026,12 +1034,22 @@
     document.getElementById("cek-history-open").addEventListener("click", () => {
       cekFormView.style.display = "none";
       cekHistoryView.style.display = "block";
+      cekHistorySearch = "";
+      cekHistorySearchInput.value = "";
       loadCekHistory(1);
     });
 
     document.getElementById("cek-history-back").addEventListener("click", () => {
       cekHistoryView.style.display = "none";
       cekFormView.style.display = "block";
+    });
+
+    cekHistorySearchInput.addEventListener("input", () => {
+      clearTimeout(cekHistorySearchTimer);
+      cekHistorySearchTimer = setTimeout(() => {
+        cekHistorySearch = cekHistorySearchInput.value.trim();
+        loadCekHistory(1);
+      }, 350);
     });
 
   </script>
