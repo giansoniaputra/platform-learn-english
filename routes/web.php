@@ -8,8 +8,8 @@ use App\Http\Controllers\KeywordController;
 use App\Http\Controllers\SentenceCheckController;
 use App\Http\Controllers\TopicController;
 use App\Http\Controllers\TtsController;
+use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\WordController;
-use App\Models\Keyword;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [LoginController::class, 'create'])->name('login');
@@ -18,7 +18,7 @@ Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
 
 Route::middleware('auth')->group(function () {
     Route::get('/', function () {
-        $keyword = Keyword::where('is_active', true)->first();
+        $keyword = auth()->user()->keywords()->where('is_active', true)->first();
 
         $topics = $keyword
             ? $keyword->topics()->orderBy('id')->get()
@@ -54,4 +54,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/dashboard/topics/{topic}', [TopicController::class, 'destroy'])->name('dashboard.topics.destroy');
 
     Route::post('/dashboard/keywords/{keyword}/exercises', [ExerciseController::class, 'generate'])->name('dashboard.exercises.generate');
+
+    Route::middleware('admin')->group(function () {
+        Route::get('/dashboard/users', [UserManagementController::class, 'index'])->name('dashboard.users');
+        Route::post('/dashboard/users', [UserManagementController::class, 'store'])->name('dashboard.users.store');
+    });
 });

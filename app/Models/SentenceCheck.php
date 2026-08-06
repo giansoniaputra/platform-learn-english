@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SentenceCheck extends Model
 {
     protected $fillable = [
+        'user_id',
         'input_hash',
         'input_text',
         'input_language',
@@ -25,6 +27,11 @@ class SentenceCheck extends Model
     public static function hashFor(string $text, string $inputLanguage): string
     {
         return hash('sha256', mb_strtolower(trim($text)).'|'.$inputLanguage);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function toApp(): array

@@ -26,6 +26,9 @@
 
                 <nav class="dashboard-nav">
                     <a href="{{ route('app') }}">← Buka aplikasi</a>
+                    @if (auth()->user()->isAdmin())
+                        <a href="{{ route('dashboard.users') }}">Kelola Pengguna</a>
+                    @endif
                 </nav>
             </header>
 

@@ -27,6 +27,9 @@ class ChatController extends Controller
             'session_id' => ['nullable', 'integer', 'exists:chat_sessions,id'],
         ]);
 
+        $topic = Topic::findOrFail($validated['topic_id']);
+        abort_unless($topic->keyword->user_id === $request->user()->id, 403);
+
         $partner = $validated['partner'];
         $inputLanguageLabel = ($validated['input_language'] ?? 'en') === 'id' ? 'Bahasa Indonesia' : 'Bahasa Inggris';
 
@@ -130,6 +133,8 @@ class ChatController extends Controller
 
     public function history(Request $request, Topic $topic): JsonResponse
     {
+        abort_unless($topic->keyword->user_id === $request->user()->id, 403);
+
         $page = max(1, (int) $request->query('page', 1));
         $search = trim((string) $request->query('search', ''));
 
@@ -152,8 +157,10 @@ class ChatController extends Controller
         ]);
     }
 
-    public function showSession(ChatSession $chatSession): JsonResponse
+    public function showSession(Request $request, ChatSession $chatSession): JsonResponse
     {
+        abort_unless($chatSession->topic->keyword->user_id === $request->user()->id, 403);
+
         return response()->json($chatSession->toFullApp());
     }
 }

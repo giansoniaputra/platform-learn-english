@@ -3,12 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 class Keyword extends Model
 {
     protected $fillable = [
+        'user_id',
         'term',
         'slug',
         'is_active',
@@ -26,6 +28,23 @@ class Keyword extends Model
         return 'slug';
     }
 
+    /**
+     * Slug is only unique per-user now, so implicit route-model-binding must
+     * be scoped to the authenticated user too — otherwise two users with a
+     * keyword of the same slug would make binding ambiguous.
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        return $this->where($field ?? $this->getRouteKeyName(), $value)
+            ->where('user_id', auth()->id())
+            ->first();
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
     public function words(): HasMany
     {
         return $this->hasMany(Word::class);
@@ -41,12 +60,12 @@ class Keyword extends Model
         return $this->hasMany(Exercise::class);
     }
 
-    public static function findOrCreateByTerm(string $term): self
+    public static function findOrCreateByTerm(User $user, string $term): self
     {
         $slug = Str::slug($term);
 
         return static::firstOrCreate(
-            ['slug' => $slug],
+            ['user_id' => $user->id, 'slug' => $slug],
             ['term' => trim($term)],
         );
     }

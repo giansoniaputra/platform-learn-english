@@ -88,6 +88,7 @@ class SentenceCheckController extends Controller
         }
 
         $record = SentenceCheck::create([
+            'user_id' => $request->user()->id,
             'input_hash' => $hash,
             'input_text' => $text,
             'input_language' => $inputLanguage,
@@ -104,7 +105,7 @@ class SentenceCheckController extends Controller
         $page = max(1, (int) $request->query('page', 1));
         $search = trim((string) $request->query('search', ''));
 
-        $query = SentenceCheck::orderByDesc('id');
+        $query = $request->user()->sentenceChecks()->orderByDesc('id');
 
         if ($search !== '') {
             $needle = '%'.mb_strtolower($search).'%';

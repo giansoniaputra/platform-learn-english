@@ -6,6 +6,7 @@ use App\Models\Keyword;
 use App\Models\Topic;
 use App\Services\ConversationGenerator;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class TopicController extends Controller
 {
@@ -31,8 +32,10 @@ class TopicController extends Controller
         ]);
     }
 
-    public function destroy(Topic $topic): JsonResponse
+    public function destroy(Request $request, Topic $topic): JsonResponse
     {
+        abort_unless($topic->keyword->user_id === $request->user()->id, 403);
+
         $topic->delete();
 
         return response()->json(['ok' => true]);

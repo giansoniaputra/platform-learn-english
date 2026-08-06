@@ -6,6 +6,7 @@ use App\Models\Keyword;
 use App\Models\Word;
 use App\Services\VocabularyGenerator;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class WordController extends Controller
 {
@@ -35,8 +36,10 @@ class WordController extends Controller
         ]);
     }
 
-    public function destroy(Word $word): JsonResponse
+    public function destroy(Request $request, Word $word): JsonResponse
     {
+        abort_unless($word->keyword->user_id === $request->user()->id, 403);
+
         $word->delete();
 
         return response()->json(['ok' => true]);

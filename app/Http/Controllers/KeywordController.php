@@ -21,13 +21,13 @@ class KeywordController extends Controller
             'term' => ['required', 'string', 'max:80'],
         ]);
 
-        $keyword = Keyword::findOrCreateByTerm($validated['term']);
+        $keyword = Keyword::findOrCreateByTerm($request->user(), $validated['term']);
 
         if ($keyword->wasRecentlyCreated) {
             $wordsResult = $this->vocabulary->generate($keyword, 10);
             $topicResult = $this->conversation->generate($keyword);
 
-            if (! Keyword::where('is_active', true)->exists()) {
+            if (! Keyword::where('user_id', $request->user()->id)->where('is_active', true)->exists()) {
                 $keyword->update(['is_active' => true]);
             }
 
@@ -50,7 +50,9 @@ class KeywordController extends Controller
         // Plain query-builder updates throughout — $keyword's in-memory
         // is_active may already read true, which would make Eloquent's
         // update() skip the column as "not dirty" and silently no-op.
-        Keyword::query()->update(['is_active' => false]);
+        // Scoped to this keyword's owner only — otherwise activating your
+        // own keyword would deactivate every other user's active keyword.
+        Keyword::where('user_id', $keyword->user_id)->update(['is_active' => false]);
         Keyword::where('id', $keyword->id)->update(['is_active' => true]);
 
         return redirect()

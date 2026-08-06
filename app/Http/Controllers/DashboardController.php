@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Keyword;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -10,7 +9,7 @@ class DashboardController extends Controller
 {
     public function index(Request $request): View
     {
-        $keywords = Keyword::orderBy('term')->get();
+        $keywords = $request->user()->keywords()->orderBy('term')->get();
 
         $selected = null;
 
