@@ -12,27 +12,31 @@
     <link rel="stylesheet" href="{{ asset('/assets/style.css') }}?v={{ filemtime(public_path('assets/style.css')) }}">
 </head>
 
-<body style="background:var(--paper)">
-    <div class="dashboard-shell">
-        <div class="dashboard-sticky-header">
-            <div class="dashboard-header">
-                <div class="brandmark"><span></span>Sepuluh · Dashboard</div>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button class="dashboard-logout" type="submit">Keluar</button>
-                </form>
+<body>
+    <div class="phone">
+        <div class="dashboard-frame">
+            <header class="dashboard-sticky-header">
+                <div class="dashboard-header">
+                    <div class="brandmark"><span></span>Sepuluh · Dashboard</div>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button class="dashboard-logout" type="submit">Keluar</button>
+                    </form>
+                </div>
+
+                <nav class="dashboard-nav">
+                    <a href="{{ route('app') }}">← Buka aplikasi</a>
+                </nav>
+            </header>
+
+            <div class="dashboard-scroll">
+                @if (session('status'))
+                <p class="status-banner">{{ session('status') }}</p>
+                @endif
+
+                @yield('content')
             </div>
-
-            <nav class="dashboard-nav">
-                <a href="{{ route('app') }}">← Buka aplikasi</a>
-            </nav>
         </div>
-
-        @if (session('status'))
-        <p class="status-banner">{{ session('status') }}</p>
-        @endif
-
-        @yield('content')
     </div>
 </body>
 
