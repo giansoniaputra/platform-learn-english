@@ -46,6 +46,10 @@ class SentenceCheckController extends Controller
               - Jika ada kesalahan tata bahasa, bentuk/konjugasi kata kerja, atau kosakata: output_en = versi
                 yang sudah diperbaiki, is_correct = false.
 
+            Isi juga translation: terjemahan Bahasa Indonesia dari output_en, supaya pelajar tahu artinya —
+            WAJIB diisi baik untuk kasus terjemahan (input Bahasa Indonesia) maupun koreksi/konfirmasi
+            (input Bahasa Inggris).
+
             Kemudian isi explanation: penjelasan singkat dalam Bahasa Indonesia yang mudah dipahami pelajar,
             membahas unsur tata bahasa penting pada output_en — kata kerja (verb) yang dipakai beserta
             bentuknya (present/past/dst), kata sifat, atau struktur kalimat lain yang relevan, supaya pelajar
@@ -60,6 +64,10 @@ class SentenceCheckController extends Controller
                     'type' => 'string',
                     'description' => 'Kalimat Bahasa Inggris yang benar — hasil terjemahan (jika input Bahasa Indonesia) atau hasil koreksi/konfirmasi (jika input Bahasa Inggris).',
                 ],
+                'translation' => [
+                    'type' => 'string',
+                    'description' => 'Terjemahan Bahasa Indonesia dari output_en. WAJIB selalu diisi.',
+                ],
                 'is_correct' => [
                     'type' => ['boolean', 'null'],
                     'description' => 'Hanya diisi true/false jika input asli Bahasa Inggris (true jika sudah benar, false jika ada kesalahan). Null jika input Bahasa Indonesia.',
@@ -69,7 +77,7 @@ class SentenceCheckController extends Controller
                     'description' => 'Penjelasan tata bahasa (verb, kata sifat, struktur) dalam Bahasa Indonesia, dan jika is_correct false juga jelaskan apa yang salah, mengapa, dan konteks yang tepat.',
                 ],
             ],
-            'required' => ['output_en', 'is_correct', 'explanation'],
+            'required' => ['output_en', 'translation', 'is_correct', 'explanation'],
             'additionalProperties' => false,
         ];
 
@@ -87,7 +95,7 @@ class SentenceCheckController extends Controller
 
         $data = $result['data'];
 
-        if (! isset($data['output_en'], $data['explanation']) || ! array_key_exists('is_correct', $data)) {
+        if (! isset($data['output_en'], $data['translation'], $data['explanation']) || ! array_key_exists('is_correct', $data)) {
             return response()->json(['error' => 'Format hasil AI tidak terbaca.'], 502);
         }
 
@@ -99,6 +107,7 @@ class SentenceCheckController extends Controller
             'input_text' => $text,
             'input_language' => $inputLanguage,
             'output_en' => $data['output_en'],
+            'translation' => $data['translation'],
             'is_correct' => $data['is_correct'],
             'explanation' => $data['explanation'],
         ]);

@@ -1767,6 +1767,14 @@ h3 {
     margin-top: 10px;
 }
 
+.cek-translation {
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--ink);
+    font-style: italic;
+    margin-top: 10px;
+}
+
 .cek-badge-neutral {
     background: var(--paper);
     color: var(--ink-soft);

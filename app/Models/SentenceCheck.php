@@ -13,6 +13,7 @@ class SentenceCheck extends Model
         'input_text',
         'input_language',
         'output_en',
+        'translation',
         'is_correct',
         'explanation',
     ];
@@ -38,6 +39,7 @@ class SentenceCheck extends Model
     {
         return [
             'output_en' => $this->output_en,
+            'translation' => $this->translation,
             'is_correct' => $this->is_correct,
             'explanation' => $this->explanation,
         ];
@@ -50,6 +52,7 @@ class SentenceCheck extends Model
             'input_text' => $this->input_text,
             'input_language' => $this->input_language,
             'output_en' => $this->output_en,
+            'translation' => $this->translation,
             'is_correct' => $this->is_correct,
             'explanation' => $this->explanation,
         ];

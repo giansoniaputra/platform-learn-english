@@ -1087,6 +1087,7 @@
           <p>${escapeHtml(data.output_en)}${speakBtnHtml("speak-btn-inline")}</p>
           ${cekBadgeHtml(data.is_correct)}
         </div>
+        ${data.translation ? `<p class="cek-translation">${escapeHtml(data.translation)}</p>` : ""}
         <p class="cek-explanation">${escapeHtml(data.explanation)}</p>
       </div>`;
     }
@@ -1214,6 +1215,7 @@
             <p>${escapeHtml(item.output_en)}${speakBtnHtml("speak-btn-inline")}</p>
             ${cekBadgeHtml(item.is_correct)}
           </div>
+          ${item.translation ? `<p class="cek-translation">${escapeHtml(item.translation)}</p>` : ""}
           <p class="cek-explanation">${escapeHtml(item.explanation)}</p>
         </div>`;
       phone.appendChild(overlay);
